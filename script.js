@@ -16,34 +16,57 @@ function getSkuFromProductItem(item) {
   return item.querySelector('span.item__sku').innerText;
 }
 
-function cartItemClickListener(event) {
-  const items = document.querySelector('.cart__items');
-  items.removeChild(event.target);
+function getCartItens() {
+  return document.querySelector('.cart__items');
+}
+
+function setSumPrice(price) {
+  const sumPrice = Number(localStorage.getItem('sumPrice')) + Number(price);
+  localStorage.setItem('sumPrice', sumPrice);
+}
+
+function getSumPrice() {
+  const totalPrice = document.querySelector('.total-price');
+  const sumPrice = localStorage.getItem('sumPrice');
+  if (sumPrice == null) {
+    totalPrice.innerHTML = '0';
+  } else {
+    totalPrice.innerHTML = `${sumPrice}`;
+  }
+}
+
+function cartItemClickListener(event, price) {
+  const totalPrice = Number(localStorage.getItem('sumPrice'));
+  event.target.remove();
+  localStorage.clear();
+  localStorage.setItem('itemsCart', getCartItens().innerHTML);
+  localStorage.setItem('sumPrice', totalPrice - price);
+  getSumPrice();
 }
 
 function createCartItemElement({ sku, name, salePrice }) {
   const li = document.createElement('li');
-  const ol = document.querySelector('.cart__items');
   li.className = 'cart__item';
   li.innerText = `SKU: ${sku} | NAME: ${name} | PRICE: $${salePrice}`;
-  li.addEventListener('click', cartItemClickListener);
-  ol.appendChild(li);
-
+  li.addEventListener('click', (event) => cartItemClickListener(event, salePrice));
+  getCartItens().appendChild(li);
+  localStorage.setItem('itemsCart', getCartItens().innerHTML);
   return li;
 }
 
-// adicionar produto 
-function addProduct(event) {
+function addCartItem(event) {
   const itemID = getSkuFromProductItem(event.target.parentElement);
   fetch(`https://api.mercadolibre.com/items/${itemID}`)
   .then((response) => response.json())
   .then((json) => {
-    const product = {
+    const item = {
       sku: json.id,
       name: json.title,
       salePrice: json.price,
     };
-    createCartItemElement(product);
+    createCartItemElement(item);
+    setSumPrice(item.salePrice);
+    getSumPrice();
   });  
 }
 
@@ -55,24 +78,54 @@ function createProductItemElement({ sku, name, image }) {
   section.appendChild(createCustomElement('span', 'item__title', name));
   section.appendChild(createProductImageElement(image));
   section.appendChild(createCustomElement('button', 'item__add', 'Adicionar ao carrinho!'))
-  .addEventListener('click', addProduct);
+  .addEventListener('click', addCartItem);
   items.appendChild(section);
-
   return section;
 }
 
-// listagem de produtos "computador"
-function listProducts() {
+function getItemsAPI() {
+  const items = document.querySelector('.items');
+  items.appendChild(createCustomElement('span', 'loading', 'loading...'));
   fetch('https://api.mercadolibre.com/sites/MLB/search?q=computador')
     .then((response) => response.json())
     .then((json) => {
+      document.querySelector('.loading').remove();
       json.results.forEach(({ id, title, thumbnail, price }) => {
         createProductItemElement({ sku: id, name: title, image: thumbnail, price });
       });
-    });
+    });  
 }
 
-// iniciar com a listagem de produtos
-window.onload = () => {
-  listProducts();
+function getItemsStoreLocal() {
+  const store = localStorage.getItem('itemsCart');
+  getCartItens().innerHTML = store;
+  const cartItem = document.querySelectorAll('.cart__item');
+  cartItem.forEach((elements) => elements.addEventListener('click', cartItemClickListener));
+}
+
+function initSumPrice() {
+  const cart = document.querySelector('.cart');
+  cart.appendChild(createCustomElement('span', 'price', 'Preco Total: $'));
+  const sumPrice = localStorage.getItem('sumPrice');
+  if (sumPrice == null) {
+    cart.appendChild(createCustomElement('span', 'total-price', '0'));
+  } else {
+    cart.appendChild(createCustomElement('span', 'total-price', `${sumPrice}`));
+  } 
+}
+
+function emptyCart() {
+  const emptyCartButton = document.querySelector('.empty-cart');
+  emptyCartButton.addEventListener('click', () => {
+    getCartItens().innerHTML = '';
+    localStorage.clear();
+    getSumPrice();
+  });
+}
+
+window.onload = () => { 
+  getItemsAPI();
+  getItemsStoreLocal();
+  emptyCart();
+  initSumPrice();
 };
