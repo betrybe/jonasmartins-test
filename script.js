@@ -16,8 +16,9 @@ function getSkuFromProductItem(item) {
   return item.querySelector('span.item__sku').innerText;
 }
 
-function cartItemClickListener() {
-  // coloque seu código aqui
+function cartItemClickListener(event) {
+  const items = document.querySelector('.cart__items');
+  items.removeChild(event.target);
 }
 
 function createCartItemElement({ sku, name, salePrice }) {
@@ -46,7 +47,6 @@ function addProduct(event) {
   });  
 }
 
-// adiciona o resultado da consulta a API do mercado livre
 function createProductItemElement({ sku, name, image }) {
   const section = document.createElement('section');
   const items = document.querySelector('.items');
